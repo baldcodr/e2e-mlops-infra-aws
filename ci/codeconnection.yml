@@ -1,0 +1,16 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "CloudFormation template for AWS CodeStar Connection with GitHub"
+
+Resources:
+  GitHubConnection:
+    Type: AWS::CodeStarConnections::Connection
+    Properties:
+      ConnectionName: "baldcodr-github-connection"
+      ProviderType: "GitHub"
+
+Outputs:
+  ConnectionArn:
+    Description: "ARN of the created CodeStar Connection"
+    Value: !GetAtt GitHubConnection.ConnectionArn
+    Export:
+      Name: "GitHubConnectionArn"
