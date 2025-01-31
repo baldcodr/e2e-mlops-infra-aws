@@ -107,6 +107,8 @@ Resources:
               DetectChanges: true
               FullRepositoryId: "baldcodr/e2e-mlops-infra-aws"
               BranchName: !Ref Branch
+              FilePathRegex: ".*"
+              OutputArtifactFormat: "CODE_ZIP"
         - Name: 'Build'
           Actions:
           - Name: 'BuildAndExecuteSageMakerPipeline'
@@ -291,6 +293,8 @@ Resources:
             DetectChanges: false
             FullRepositoryId: "baldcodr/e2e-mlops-infra-aws"
             BranchName: !Ref Branch
+            FilePath: 'deploy/.*'
+            OutputArtifactFormat: "CODE_ZIP"
       - Name: 'Build'
         Actions:
         - Name: 'BuildDeploymentTemplates'
