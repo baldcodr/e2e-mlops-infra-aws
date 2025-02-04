@@ -1,0 +1,93 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS Service Catalog Product Deployment Template'
+Parameters:
+  UserProfileName:
+    Type: String
+    Description: 'SageMaker User Profile Name'
+
+Resources:
+  SageMakerExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: SageMakerExecutionRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: sagemaker.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSageMakerFullAccess
+        - arn:aws:iam::aws:policy/AmazonSageMakerCanvasFullAccess
+        - arn:aws:iam::aws:policy/AmazonSageMakerCanvasDataPrepFullAccess
+  SageMakerDomain:
+    Type: AWS::SageMaker::Domain
+    Properties:
+      AuthMode: IAM
+      DefaultUserSettings:
+        ExecutionRole: !GetAtt SageMakerExecutionRole.Arn
+      DomainName: sagemaker-domain
+      SubnetIds:
+        - subnet-05373686013bcc1f0
+      VpcId: vpc-061ed924d80cc2158
+  SageMakerUserProfile:
+    Type: AWS::SageMaker::UserProfile
+    Properties:
+      DomainId: !Ref SageMakerDomain
+      UserProfileName: !Ref UserProfileName
+  ServiceCatalogPortfolio:
+    Type: 'AWS::ServiceCatalog::Portfolio'
+    Properties:
+      DisplayName: 'MyPortfolio'
+      Description: 'Portfolio for my products'
+      ProviderName: 'ML Team'
+  ServiceCatalogProduct:
+    Type: 'AWS::ServiceCatalog::CloudFormationProduct'
+    Properties:
+      Name: 'SageMakerProjectMLOps'
+      Owner: 'ML Team'
+      Description: 'MLOps product in AWS Service Catalog'
+      Distributor: 'Internal'
+      SupportDescription: 'Contact support@company.com'
+      SupportEmail: 'support@company.com'
+      SupportUrl: 'https://support.company.com'
+      ProvisioningArtifactParameters:
+        - Name: 'v1'
+          Description: 'Initial version'
+          Info:
+            LoadTemplateFromURL: 'https://e2e-mlops-template-bucket.s3.us-east-1.amazonaws.com/template.yml'
+          Type: 'CLOUD_FORMATION_TEMPLATE'
+  PortfolioProductAssociation:
+    Type: 'AWS::ServiceCatalog::PortfolioProductAssociation'
+    Properties:
+      PortfolioId: !Ref ServiceCatalogPortfolio
+      ProductId: !Ref ServiceCatalogProduct
+  PortfolioAccess:
+    Type: 'AWS::ServiceCatalog::PortfolioPrincipalAssociation'
+    Properties:
+      PortfolioId: !Ref ServiceCatalogPortfolio
+      PrincipalARN: 
+        Fn::Join:
+        - ':'
+        - - 'arn'
+          - Ref: 'AWS::Partition'
+          - 'iam:'
+          - Ref: 'AWS::AccountId'
+          - 'role/service-role/AmazonSageMakerServiceCatalogProductsUseRole'
+      PrincipalType: 'IAM'
+
+Outputs:
+  PortfolioId:
+    Description: 'The ID of the created Service Catalog Portfolio'
+    Value: !Ref ServiceCatalogPortfolio
+  ServiceCatalogProduct:
+    Description: "Service Catalog Product Name"
+    Value: !Ref ServiceCatalogProduct
+    Export:
+      Name: "ServiceCatalogProduct"
+  ProvisioningArtifactId:
+    Description: "Service Catalog ProvisioningArtifactId"
+    Value: !GetAtt ServiceCatalogProduct.ProvisioningArtifactIds
+    Export:
+      Name: "ProvisioningArtifactId"
