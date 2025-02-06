@@ -117,7 +117,7 @@ Resources:
             Configuration:
               ConnectionArn: !ImportValue GitHubConnectionArn
               DetectChanges: true
-              FullRepositoryId: "baldcodr/e2e-mlops-infra-aws"
+              FullRepositoryId: "bbc/eba-spike-build-model"
               BranchName: !Ref Branch
               OutputArtifactFormat: "CODE_ZIP"
         - Name: 'Build'
