@@ -4,7 +4,6 @@ Parameters:
   UserProfileName:
     Type: String
     Description: 'SageMaker User Profile Name'
-
 Resources:
   SageMakerExecutionRole:
     Type: AWS::IAM::Role
@@ -15,12 +14,20 @@ Resources:
         Statement:
           - Effect: Allow
             Principal:
-              Service: sagemaker.amazonaws.com
+              Service: 
+                - sagemaker.amazonaws.com
+                - servicecatalog.amazonaws.com
+                - cloudformation.amazonaws.com
+                - codebuild.amazonaws.com
             Action: sts:AssumeRole
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/AmazonSageMakerFullAccess
         - arn:aws:iam::aws:policy/AmazonSageMakerCanvasFullAccess
         - arn:aws:iam::aws:policy/AmazonSageMakerCanvasDataPrepFullAccess
+        - arn:aws:iam::aws:policy/AmazonSageMakerAdmin-ServiceCatalogProductsServiceRolePolicy
+        - arn:aws:iam::aws:policy/service-role/AWSCodeStarServiceRole
+        - arn:aws:iam::aws:policy/service-role/AmazonSageMakerServiceCatalogProductsCloudformationServiceRolePolicy
+        - arn:aws:iam::271743409234:policy/service-role/AmazonSageMakerServiceCatalogProductsUseRole-20241016T221823
   SageMakerDomain:
     Type: AWS::SageMaker::Domain
     Properties:
@@ -36,6 +43,8 @@ Resources:
     Properties:
       DomainId: !Ref SageMakerDomain
       UserProfileName: !Ref UserProfileName
+      UserSettings:
+        ExecutionRole: !GetAtt SageMakerExecutionRole.Arn
   ServiceCatalogPortfolio:
     Type: 'AWS::ServiceCatalog::Portfolio'
     Properties:
@@ -58,6 +67,10 @@ Resources:
           Info:
             LoadTemplateFromURL: 'https://e2e-mlops-template-bucket.s3.us-east-1.amazonaws.com/template.yml'
           Type: 'CLOUD_FORMATION_TEMPLATE'
+      Tags:
+        -
+          Key: sagemaker:studio-visibility
+          Value: 'true'
   PortfolioProductAssociation:
     Type: 'AWS::ServiceCatalog::PortfolioProductAssociation'
     Properties:
@@ -82,10 +95,10 @@ Outputs:
     Description: 'The ID of the created Service Catalog Portfolio'
     Value: !Ref ServiceCatalogPortfolio
   ServiceCatalogProduct:
-    Description: "Service Catalog Product Name"
+    Description: "Service Catalog Product Id"
     Value: !Ref ServiceCatalogProduct
     Export:
-      Name: "ServiceCatalogProduct"
+      Name: "ServiceCatalogProductId"
   ProvisioningArtifactId:
     Description: "Service Catalog ProvisioningArtifactId"
     Value: !GetAtt ServiceCatalogProduct.ProvisioningArtifactIds

@@ -8,9 +8,12 @@ Resources:
   GitHubConnection:
     Type: AWS::CodeStarConnections::Connection
     Properties:
-      ConnectionName: 
+      ConnectionName:
         Fn::Sub: "${GithubUsername}-github-connection"
       ProviderType: "GitHub"
+      Tags:
+        - Key: "sagemaker"
+          Value: "true"
 
 Outputs:
   ConnectionArn:
