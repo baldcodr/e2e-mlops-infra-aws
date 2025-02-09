@@ -93,7 +93,7 @@ Resources:
             Ref: 'AWS::Region'
       Source:
         Type: 'CODEPIPELINE'
-        BuildSpec: 'codebuild-buildspec.yml'
+        BuildSpec: 'buildspec.yml'
       TimeoutInMinutes: 480
   ModelBuildPipeline:
     Type: 'AWS::CodePipeline::Pipeline'
