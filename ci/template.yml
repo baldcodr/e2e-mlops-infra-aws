@@ -240,7 +240,7 @@ Resources:
           Value: 'prod-config-export.json'
       Source:
         Type: 'CODEPIPELINE'
-        BuildSpec: 'buildspec.yml'
+        BuildSpec: 'deploy/buildspec.yml'
       TimeoutInMinutes: 30
   ModelDeployTestProject:
     Type: 'AWS::CodeBuild::Project'
@@ -278,7 +278,7 @@ Resources:
           Value: 'test-results.json'
       Source:
         Type: 'CODEPIPELINE'
-        BuildSpec: 'test/buildspec.yml'
+        BuildSpec: 'deploy/test/buildspec.yml'
       TimeoutInMinutes: 30
   ModelDeployPipeline:
     Type: 'AWS::CodePipeline::Pipeline'
