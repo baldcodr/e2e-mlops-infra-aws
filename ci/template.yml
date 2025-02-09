@@ -11,23 +11,45 @@ Parameters:
     AllowedPattern: '^[a-zA-Z](-*[a-zA-Z0-9])*'
   SageMakerProjectId:
     Type: String
-    Description: 'Service generated Id of the project.'
+    Description: Service generated Id of the project.
+    Default: 'SageMakerProjectMLOps'
+  ProductId:
+    Type: String
+    Description: 'Service Catalog Product Id of the project.'
+  RepositoryUrl:
+    Type: String
+    Default: 'https://github.com/baldcodr/e2e-mlops-infra-aws.git'
+  GitRepo:
+    Type: String
+    Description: 'Repo branch to use for the pipeline'
+    Default: 'baldcodr/e2e-mlops-infra-aws'
+  GitHubConnectionArn:
+    Type: String
+    Description: 'ARN of the GitHub Connection'
   Branch:
     Type: String
     Description: 'Repo branch to use for the pipeline'
+    Default: 'main'
+
 Resources:
   MlOpsArtifactsBucket:
     Type: 'AWS::S3::Bucket'
-    DeletionPolicy: 'Retain'
-    UpdateReplacePolicy: 'Retain'
+    DeletionPolicy: 'Delete'
+    UpdateReplacePolicy: 'Delete'
     Properties:
       BucketName:
-        Fn::Sub: 'sagemaker-project-${SageMakerProjectId}'
+        Fn::Sub: 'sagemaker-project-${SageMakerProjectName}'
+  SageMakerProject:
+    Type: AWS::SageMaker::Project
+    Properties:
+      ProjectName: !Ref SageMakerProjectName
+      ServiceCatalogProvisioningDetails:
+        ProductId: !Ref ProductId
   SageMakerModelPipelineBuildProject:
     Type: 'AWS::CodeBuild::Project'
     Properties:
       Name:
-        Fn::Sub: 'sagemaker-${SageMakerProjectName}-${SageMakerProjectId}-modelbuild'
+        Fn::Sub: 'sagemaker-${SageMakerProjectName}-modelbuild'
       Description: 'Builds the model building workflow code repository, creates
         the SageMaker Pipeline and executes it'
       ServiceRole:
@@ -49,8 +71,8 @@ Resources:
           Value:
             Ref: 'SageMakerProjectName'
         - Name: 'SAGEMAKER_PROJECT_ID'
-          Value:
-            Ref: 'SageMakerProjectId'
+          Value: 
+            Fn::GetAtt: [ SageMakerProject,ProjectId ]
         - Name: 'ARTIFACT_BUCKET'
           Value:
             Ref: 'MlOpsArtifactsBucket'
@@ -71,13 +93,13 @@ Resources:
             Ref: 'AWS::Region'
       Source:
         Type: 'CODEPIPELINE'
-        BuildSpec: 'buildspec.yml'
+        BuildSpec: 'codebuild-buildspec.yml'
       TimeoutInMinutes: 480
   ModelBuildPipeline:
     Type: 'AWS::CodePipeline::Pipeline'
     Properties:
       Name:
-        Fn::Sub: 'sagemaker-${SageMakerProjectName}-${SageMakerProjectId}-modelbuild'
+        Fn::Sub: 'sagemaker-${SageMakerProjectName}-modelbuild'
       RoleArn:
         Fn::Join:
         - ':'
@@ -103,11 +125,10 @@ Resources:
             OutputArtifacts:
               - Name: ModelBuildSourceArtifact
             Configuration:
-              ConnectionArn: !ImportValue GitHubConnectionArn
+              ConnectionArn: !Ref GitHubConnectionArn
               DetectChanges: true
-              FullRepositoryId: "bbc/eba-spike-build-model"
+              FullRepositoryId: !Ref GitRepo
               BranchName: !Ref Branch
-              FilePathRegex: ".*"
               OutputArtifactFormat: "CODE_ZIP"
         - Name: 'Build'
           Actions:
@@ -129,7 +150,7 @@ Resources:
     Type: 'AWS::Events::Rule'
     Properties:
       Name:
-        Fn::Sub: 'sagemaker-${SageMakerProjectName}-${SageMakerProjectId}-model'
+        Fn::Sub: 'sagemaker-${SageMakerProjectName}-model'
       Description: 'Rule to trigger a deployment when SageMaker Model registry is
         updated with a new model package. For example, a new model package is registered
         with Registry'
@@ -140,7 +161,7 @@ Resources:
         - 'SageMaker Model Package State Change'
         detail:
           ModelPackageGroupName:
-          - Fn::Sub: '${SageMakerProjectName}-${SageMakerProjectId}'
+          - Fn::Sub: 'model-pg-name-${SageMakerProjectName}'
           ModelApprovalStatus:
           - 'anything-but':
             - 'PendingManualApproval'
@@ -169,7 +190,7 @@ Resources:
     Type: 'AWS::CodeBuild::Project'
     Properties:
       Name:
-        Fn::Sub: 'sagemaker-${SageMakerProjectName}-${SageMakerProjectId}-modeldeploy'
+        Fn::Sub: 'sagemaker-${SageMakerProjectName}-modeldeploy'
       Description: 'Builds the Cfn template which defines the Endpoint with specified
         configuration'
       ServiceRole:
@@ -191,8 +212,8 @@ Resources:
           Value:
             Ref: 'SageMakerProjectName'
         - Name: 'SAGEMAKER_PROJECT_ID'
-          Value:
-            Ref: 'SageMakerProjectId'
+          Value: 
+            Fn::GetAtt: [ SageMakerProject,ProjectId ]
         - Name: 'ARTIFACT_BUCKET'
           Value:
             Ref: 'MlOpsArtifactsBucket'
@@ -207,7 +228,7 @@ Resources:
               - 'role/service-role/AmazonSageMakerServiceCatalogProductsUseRole'
         - Name: 'SOURCE_MODEL_PACKAGE_GROUP_NAME'
           Value:
-            Fn::Sub: '${SageMakerProjectName}-${SageMakerProjectId}'
+            Fn::Sub: '${SageMakerProjectName}'
         - Name: 'AWS_REGION'
           Value:
             Ref: 'AWS::Region'
@@ -225,7 +246,7 @@ Resources:
     Type: 'AWS::CodeBuild::Project'
     Properties:
       Name:
-        Fn::Sub: 'sagemaker-${SageMakerProjectName}-${SageMakerProjectId}-testing'
+        Fn::Sub: 'sagemaker-${SageMakerProjectName}-testing'
       Description: 'Test the deployment endpoint'
       ServiceRole:
         Fn::Join:
@@ -246,8 +267,8 @@ Resources:
           Value:
             Ref: 'SageMakerProjectName'
         - Name: 'SAGEMAKER_PROJECT_ID'
-          Value:
-            Ref: 'SageMakerProjectId'
+          Value: 
+            Fn::GetAtt: [ SageMakerProject,ProjectId ]
         - Name: 'AWS_REGION'
           Value:
             Ref: 'AWS::Region'
@@ -263,7 +284,7 @@ Resources:
     Type: 'AWS::CodePipeline::Pipeline'
     Properties:
       Name:
-        Fn::Sub: 'sagemaker-${SageMakerProjectName}-${SageMakerProjectId}-modeldeploy'
+        Fn::Sub: 'sagemaker-${SageMakerProjectName}-modeldeploy'
       RoleArn:
         Fn::Join:
         - ':'
@@ -289,11 +310,10 @@ Resources:
           OutputArtifacts:
             - Name: SourceArtifact
           Configuration:
-            ConnectionArn: !ImportValue GitHubConnectionArn
+            ConnectionArn: !Ref GitHubConnectionArn
             DetectChanges: false
-            FullRepositoryId: "baldcodr/e2e-mlops-infra-aws"
+            FullRepositoryId: !Ref GitRepo
             BranchName: !Ref Branch
-            FilePath: 'deploy/.*'
             OutputArtifactFormat: "CODE_ZIP"
       - Name: 'Build'
         Actions:
@@ -333,7 +353,7 @@ Resources:
                 - Ref: 'AWS::AccountId'
                 - 'role/service-role/AmazonSageMakerServiceCatalogProductsUseRole'
             StackName:
-              Fn::Sub: 'sagemaker-${SageMakerProjectName}-${SageMakerProjectId}-deploy-staging'
+              Fn::Sub: 'sagemaker-${SageMakerProjectName}-deploy-staging'
             TemplateConfiguration: 'BuildArtifact::staging-config-export.json'
             TemplatePath: 'BuildArtifact::template-export.yml'
           RunOrder: 1
@@ -384,8 +404,14 @@ Resources:
                 - 'role/service-role/AmazonSageMakerServiceCatalogProductsUseRole'
             Capabilities: 'CAPABILITY_NAMED_IAM'
             StackName:
-              Fn::Sub: 'sagemaker-${SageMakerProjectName}-${SageMakerProjectId}-deploy-prod'
+              Fn::Sub: 'sagemaker-${SageMakerProjectName}-deploy-prod'
             TemplateConfiguration: 'BuildArtifact::prod-config-export.json'
             TemplatePath: 'BuildArtifact::template-export.yml'
           RunOrder: 1
-Rules: {}
+  ModelBuildSagemakerCodeRepository:
+    Type: AWS::SageMaker::CodeRepository
+    Properties:
+      CodeRepositoryName: !Sub ${SageMakerProjectName}-modelbuild-repo
+      GitConfig:
+        Branch: !Ref Branch
+        RepositoryUrl: !Ref RepositoryUrl
