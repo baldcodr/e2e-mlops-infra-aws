@@ -9,13 +9,6 @@ Parameters:
     MinLength: 1
     MaxLength: 32
     AllowedPattern: '^[a-zA-Z](-*[a-zA-Z0-9])*'
-  SageMakerProjectId:
-    Type: String
-    Description: Service generated Id of the project.
-    Default: 'SageMakerProjectMLOps'
-  ProductId:
-    Type: String
-    Description: 'Service Catalog Product Id of the project.'
   RepositoryUrl:
     Type: String
     Default: 'https://github.com/baldcodr/e2e-mlops-infra-aws.git'
@@ -39,12 +32,6 @@ Resources:
     Properties:
       BucketName:
         Fn::Sub: 'sagemaker-project-${SageMakerProjectName}'
-  SageMakerProject:
-    Type: AWS::SageMaker::Project
-    Properties:
-      ProjectName: !Ref SageMakerProjectName
-      ServiceCatalogProvisioningDetails:
-        ProductId: !Ref ProductId
   SageMakerModelPipelineBuildProject:
     Type: 'AWS::CodeBuild::Project'
     Properties:
@@ -70,9 +57,6 @@ Resources:
         - Name: 'SAGEMAKER_PROJECT_NAME'
           Value:
             Ref: 'SageMakerProjectName'
-        - Name: 'SAGEMAKER_PROJECT_ID'
-          Value: 
-            Fn::GetAtt: [ SageMakerProject,ProjectId ]
         - Name: 'ARTIFACT_BUCKET'
           Value:
             Ref: 'MlOpsArtifactsBucket'
@@ -211,9 +195,6 @@ Resources:
         - Name: 'SAGEMAKER_PROJECT_NAME'
           Value:
             Ref: 'SageMakerProjectName'
-        - Name: 'SAGEMAKER_PROJECT_ID'
-          Value: 
-            Fn::GetAtt: [ SageMakerProject,ProjectId ]
         - Name: 'ARTIFACT_BUCKET'
           Value:
             Ref: 'MlOpsArtifactsBucket'
@@ -266,9 +247,6 @@ Resources:
         - Name: 'SAGEMAKER_PROJECT_NAME'
           Value:
             Ref: 'SageMakerProjectName'
-        - Name: 'SAGEMAKER_PROJECT_ID'
-          Value: 
-            Fn::GetAtt: [ SageMakerProject,ProjectId ]
         - Name: 'AWS_REGION'
           Value:
             Ref: 'AWS::Region'
